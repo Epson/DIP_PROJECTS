@@ -1,0 +1,133 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>直方图均衡</title>
+    <script type="text/javascript" src="Algorithm.js"></script>
+</head>
+
+<body>
+    <canvas id="myCanvas" width=800 height=500></canvas>
+
+    <input type="button" value="process" id="process" />
+</body>
+</html>
+
+<script type="text/javascript">
+
+    var img = new Image() ;
+    img.src = "images/Fig0316(1).jpg";
+    img.onload = function() {
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var width = canvas.width;
+        var height = canvas.height;
+
+        ctx.drawImage(img, 0, 0);
+
+        var imageProcessor = {
+            filtersProcessor : {
+                midValueFilter: function(data, index, width, sizeOfFilter) {
+                    var range = Math.floor(sizeOfFilter / 2);
+                    var array = [];
+                    for( var i = -range; i <= range; i ++ ) {
+                        for( var j = -range; j <= range; j ++ ) {
+                            array.push(data[index + (i * width + j) * 4]);
+                        }
+                    }
+
+                    var algorithm = new Algorithm();
+                    algorithm.quickSort(array, 0, array.length - 1);
+
+                    return array[Math.floor(array.length / 2)];
+                }
+            },
+            convertToGrayImage: function(canvas) {
+                var ctx = canvas.getContext("2d");
+                var width = canvas.width;
+                var height = canvas.height;
+                var inputData = ctx.getImageData(0, 0, width, height).data;
+                var length = inputData.length;
+                var newImageData = ctx.createImageData(width, height);
+
+                for( var i = 0; i < length; i += 4 ) {
+                    newImageData.data[i] = inputData[i] ;
+                    newImageData.data[i+1] = inputData[i] ;
+                    newImageData.data[i+2] = inputData[i] ;
+                    newImageData.data[i+3] = 255 ;
+                }
+
+                return newImageData;
+            },
+            histogramEqualization: function(canvas) {
+                var ctx = canvas.getContext("2d");
+                var width = canvas.width;
+                var height = canvas.height;
+                var inputData = this.convertToGrayImage(canvas).data;
+                var length = inputData.length;
+                var newImageData = ctx.createImageData(width, height);
+                var NumOfEachGrayLevel = [];
+                var targetGrayLevels = [];
+
+                for( var i = 0; i <= 255; i ++ ) {
+                    NumOfEachGrayLevel[i] = 0;
+                }
+
+                for( var i = 0; i < length; i += 4 ) {
+                    NumOfEachGrayLevel[inputData[i]] += 1 ;
+                }
+
+                for( var i = 0; i < 256; i ++ ) {
+                    var sumOfProbability = 0;
+                    for( var j = 0; j <= i; j ++ ) {
+                        sumOfProbability += NumOfEachGrayLevel[j];
+                    }
+                    targetGrayLevels[i] = 255 * ( sumOfProbability / (width * height) );
+                }
+
+                for( var i = 0; i < length; i += 4 ) {
+                    newImageData.data[i] = targetGrayLevels[inputData[i]];
+                    newImageData.data[i+1] = targetGrayLevels[inputData[i]];
+                    newImageData.data[i+2] = targetGrayLevels[inputData[i]];
+                    newImageData.data[i+3] = 255;
+                }
+
+                return newImageData;
+            },
+
+            demarcate : function(data, newImageData, minValue) {
+                var length = data.length;
+                var maxInterval = 0;
+
+                for( var i = 0; i < length; i ++ ) {
+                    if( maxInterval < data[i] - minValue && (i + 1) % 4 !== 0 ) {
+                        maxInterval = data[i] - minValue;
+                    }
+                }
+
+                for( var i = 0; i < length; i ++ ) {
+                    if( maxInterval < data[i] - minValue && (i + 1) % 4 !== 0 ) {
+                        data[i] = parseInt( 255 * ( (data[i] - minValue) / maxInterval ) );
+                    }
+                }
+            },
+
+            showImage: function(imageData, x, y) {
+                x = x || 0;
+                y = y || 0;
+                ctx.putImageData(imageData, x, y) ;
+            }
+        };
+
+        var process = document.getElementById("process");
+        process.onclick = function() {
+            var imageData = imageProcessor.histogramEqualization(canvas);
+            imageProcessor.showImage(imageData, 0, 0);
+        };
+    };
+
+</script>
+
+

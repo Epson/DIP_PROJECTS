@@ -1,0 +1,179 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>中值滤波器</title>
+    <script type="text/javascript" src="lib/Algorithm.js"></script>
+</head>
+
+<body>
+    <canvas id="myCanvas" width=800 height=500></canvas>
+
+    <input type="button" value="process" id="process" />
+</body>
+</html>
+
+<script type="text/javascript">
+
+    var img = new Image() ;
+    img.src = "images/Fig0335(a).png";
+    img.onload = function() {
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var width = canvas.width;
+        var height = canvas.height;
+
+        ctx.drawImage(img, 0, 0);
+
+        var imageProcessor = {
+            filtersProcessor : {
+                midValueFilter: function(data, index, width, sizeOfFilter) {
+                    var range = Math.floor(sizeOfFilter / 2);
+                    var array = [];
+                    for( var i = -range; i <= range; i ++ ) {
+                        for( var j = -range; j <= range; j ++ ) {
+                            array.push(data[index + (i * width + j) * 4]);
+                        }
+                    }
+
+                    var algorithm = new Algorithm();
+                    algorithm.quickSort(array, 0, array.length - 1);
+
+                    return array[Math.floor(array.length / 2)];
+                }
+            },
+            calculateConvolution: function(canvas, filterType, sizeOfFilter) {
+                var width = canvas.width;
+                var height = canvas.height;
+                var ctx = canvas.getContext("2d");
+                var inputData = ctx.getImageData(0, 0, width, height).data;
+                var newImageData;
+                var minValue = 999999;
+                var dataArray = [];
+
+                //padding
+                var newWidth = width + 2 * ( sizeOfFilter - 1 );
+                var newHeight = height + 2 * ( sizeOfFilter - 1 );
+                var indexOfSrcData = 0;
+                newImageData = ctx.createImageData(newWidth, newHeight);
+                for( var i = 0; i < sizeOfFilter - 1; i ++ ) {
+                    for( var j = 0 ; j < newWidth; j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        dataArray[index] = 0;
+                        dataArray[index+1] = 0;
+                        dataArray[index+2] = 0;
+                        dataArray[index+3] = 255;
+                        newImageData.data[index] = 0;
+                        newImageData.data[index+1] = 0;
+                        newImageData.data[index+2] = 0;
+                        newImageData.data[index+3] = 255;
+                    }
+                }
+                for( var i = sizeOfFilter - 1; i < height + sizeOfFilter - 1; i ++ ) {
+                    for( var j = 0; j < sizeOfFilter - 1; j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        dataArray[index] = 0;
+                        dataArray[index+1] = 0;
+                        dataArray[index+2] = 0;
+                        dataArray[index+3] = 255;
+                        newImageData.data[index] = 0;
+                        newImageData.data[index+1] = 0;
+                        newImageData.data[index+2] = 0;
+                        newImageData.data[index+3] = 255;
+                    }
+                    for( var j = sizeOfFilter - 1; j < sizeOfFilter - 1 + width; j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        newImageData.data[index] = inputData[indexOfSrcData++];
+                        newImageData.data[index+1] = inputData[indexOfSrcData++];
+                        newImageData.data[index+2] = inputData[indexOfSrcData++];
+                        newImageData.data[index+3] = inputData[indexOfSrcData++];
+                    }
+                    for( var j = sizeOfFilter - 1 + width; j < newWidth; j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        dataArray[index] = 0;
+                        dataArray[index+1] = 0;
+                        dataArray[index+2] = 0;
+                        dataArray[index+3] = 255;
+                        newImageData.data[index] = 0;
+                        newImageData.data[index+1] = 0;
+                        newImageData.data[index+2] = 0;
+                        newImageData.data[index+3] = 255;
+                    }
+                }
+                for( var i = height + sizeOfFilter - 1; i < height + 2 * (sizeOfFilter - 1); i ++ ) {
+                    for( var j = 0 ; j < newWidth; j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        dataArray[index] = 0;
+                        dataArray[index+1] = 0;
+                        dataArray[index+2] = 0;
+                        dataArray[index+3] = 255;
+                        newImageData.data[index] = 0;
+                        newImageData.data[index+1] = 0;
+                        newImageData.data[index+2] = 0;
+                        newImageData.data[index+3] = 255;
+                    }
+                }
+
+                //Convolution
+                for( var i = sizeOfFilter - 1; i < newHeight - ( sizeOfFilter - 1 ); i ++ ) {
+                    for( var j = sizeOfFilter - 1; j < newWidth - ( sizeOfFilter - 1 ); j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        dataArray[index] = this.filtersProcessor[filterType](newImageData.data, index, newWidth, sizeOfFilter);
+                        dataArray[index+1] = this.filtersProcessor[filterType](newImageData.data, index+1, newWidth, sizeOfFilter);
+                        dataArray[index+2] = this.filtersProcessor[filterType](newImageData.data, index+2, newWidth, sizeOfFilter);
+                        minValue = dataArray[index] < minValue ? dataArray[index] : minValue;
+                        minValue = dataArray[index+1] < minValue ? dataArray[index+1] : minValue;
+                        minValue = dataArray[index+2] < minValue ? dataArray[index+2] : minValue;
+                    }
+                }
+
+                this.demarcate(dataArray, minValue);
+
+                for( var i = sizeOfFilter - 1; i < newHeight - ( sizeOfFilter - 1 ); i ++ ) {
+                    for( var j = sizeOfFilter - 1; j < newWidth - ( sizeOfFilter - 1 ); j ++ ) {
+                        var index = (i * newWidth + j) * 4;
+                        newImageData.data[index] = dataArray[index];
+                        newImageData.data[index+1] = dataArray[index+1];
+                        newImageData.data[index+2] = dataArray[index+2];
+                    }
+                }
+
+                return newImageData;
+            },
+            demarcate : function(data, newImageData, minValue) {
+                var length = data.length;
+                var maxInterval = 0;
+
+                for( var i = 0; i < length; i ++ ) {
+                    if( maxInterval < data[i] - minValue && (i + 1) % 4 !== 0 ) {
+                        maxInterval = data[i] - minValue;
+                    }
+                }
+
+//                for( var i = 0; i < length; i ++ ) {
+//                    if( maxInterval < data[i] - minValue && (i + 1) % 4 !== 0 ) {
+//                        data[i] = parseInt( 255 * ( (data[i] - minValue) / maxInterval ) );
+//                    }
+//                }
+            },
+
+            showImage: function(imageData, x, y) {
+                x = x || 0;
+                y = y || 0;
+                ctx.putImageData(imageData, x, y) ;
+            }
+        };
+
+        var typeOfFilter = "midValueFilter";
+        var process = document.getElementById("process");
+        process.onclick = function() {
+            var imageData = imageProcessor.calculateConvolution(canvas, typeOfFilter, 3);
+            imageProcessor.showImage(imageData, -2, -2);
+        };
+    };
+
+</script>
+
+

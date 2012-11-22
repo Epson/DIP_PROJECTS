@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>彩色图转灰度图</title>
+</head>
+
+<body>
+    <canvas id="myCanvas" width=800 height=500></canvas>
+
+    <input type="button" value="process" id="process" />
+</body>
+</html>
+
+<script type="text/javascript">
+
+    var img = new Image() ;
+    img.src = "images/1.jpg" ;
+    img.onload = function() {
+        var canvas = document.getElementById("myCanvas") ;
+        var ctx = canvas.getContext("2d") ;
+        canvas.width = img.naturalWidth ;
+        canvas.height = img.naturalHeight ;
+        var width = canvas.width ;
+        var height = canvas.height ;
+
+        ctx.drawImage(img, 0, 0) ;
+
+        var imageProcessor = {
+            convertToGrayImage: function(canvas) {
+                var ctx = canvas.getContext("2d");
+                var width = canvas.width;
+                var height = canvas.height;
+                var inputData = ctx.getImageData(0, 0, width, height).data;
+                var length = inputData.length;
+                var newImageData = ctx.createImageData(width, height);
+
+                for( var i = 0; i < length; i += 4 ) {
+                    newImageData.data[i] = inputData[i] ;
+                    newImageData.data[i+1] = inputData[i] ;
+                    newImageData.data[i+2] = inputData[i] ;
+                    newImageData.data[i+3] = 255 ;
+                }
+
+                return newImageData;
+            },
+
+            showImage: function(imageData, x, y) {
+                x = x || 0;
+                y = y || 0;
+                ctx.putImageData(imageData, x, y) ;
+            }
+        };
+
+        var process = document.getElementById("process");
+        process.onclick = function() {
+            var imageData = imageProcessor.convertToGrayImage(canvas);
+            imageProcessor.showImage(imageData, 0, 0);
+        };
+    };
+
+</script>
+
+

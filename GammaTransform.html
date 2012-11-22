@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>幂律（伽马）变换</title>
+    <script type="text/javascript" src="Algorithm.js"></script>
+</head>
+
+<body>
+    <canvas id="myCanvas" width=800 height=500></canvas>
+
+    <input type="button" value="process" id="process" />
+</body>
+</html>
+
+<script type="text/javascript">
+
+    var img = new Image() ;
+    img.src = "images/Fig0308(a).jpg";
+    img.onload = function() {
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+        var width = img.naturalWidth;
+        var height = img.naturalHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.drawImage(img, 0, 0);
+
+        var imageProcessor = {
+            GammaTransform: function(canvas, gammaValue, c) {
+                var ctx = canvas.getContext("2d");
+                var width = canvas.width;
+                var height = canvas.height;
+                var inputData = ctx.getImageData(0, 0, width, height).data;
+                var length = inputData.length;
+                var dataArray = [];
+                var newImageData = ctx.createImageData(width, height);
+                var pow = Math.pow;
+
+                var minValue = 0;
+                var indexOfMinValueindex = 0;
+                for( var i = 0; i < length; i ++ ) {
+                    if( (i + 1) % 4 !== 0 ) {
+                        if( inputData[i] < minValue ) {
+                            minValue = inputData[i];
+                            indexOfMinValueindex = i;
+                        }
+                        dataArray[i] = c * pow(inputData[i], gammaValue);
+                    }
+                }
+
+                this.demarcate(dataArray, newImageData, minValue);
+
+                return newImageData;
+            },
+            demarcate : function(data, newImageData, minValue) {
+                var length = data.length;
+                var maxInterval = 0;
+
+                for( var i = 0; i < length; i ++ ) {
+                    if( maxInterval < data[i] - minValue && (i + 1) % 4 !== 0 ) {
+                        maxInterval = data[i] - minValue;
+                    }
+                }
+
+                for( var i = 0; i < length; i ++ ) {
+                    if( (i + 1) % 4 !== 0 ) {
+                        newImageData.data[i] = parseInt( 255 * ( (data[i] - minValue) / maxInterval ) );
+                    }
+                    else {
+                        newImageData.data[i] = 255;
+                    }
+                }
+            },
+            showImage: function(imageData, x, y) {
+                x = x || 0;
+                y = y || 0;
+                ctx.putImageData(imageData, x, y) ;
+            }
+        };
+
+        var process = document.getElementById("process");
+        process.onclick = function() {
+            var imageData = imageProcessor.GammaTransform(canvas, 0.4, 1);
+            imageProcessor.showImage(imageData, 0, 0);
+        };
+    };
+
+</script>
+
+
